@@ -54,7 +54,6 @@ CAPITALIZATION_EXCEPTIONS = {
     "MultiIndex",
     "NumFOCUS",
     "sklearn",
-    "Docker",
     "PeriodIndex",
     "NA",
     "NaN",
@@ -161,10 +160,10 @@ CAPITALIZATION_EXCEPTIONS = {
     "Numba",
     "Timestamp",
     "PyArrow",
-    "Gitpod",
     "Liveserve",
     "I",
     "VSCode",
+    "MacOS",
 }
 
 CAP_EXCEPTIONS_DICT = {word.lower(): word for word in CAPITALIZATION_EXCEPTIONS}

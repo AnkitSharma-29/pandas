@@ -3,6 +3,10 @@ from datetime import (
     timedelta,
     timezone,
 )
+import subprocess
+import sys
+import textwrap
+import zoneinfo
 
 import dateutil.tz
 import pytest
@@ -14,6 +18,25 @@ from pandas._libs.tslibs import (
 from pandas.compat import is_platform_windows
 
 from pandas import Timestamp
+
+
+@pytest.mark.single_cpu
+def test_no_timezone_data():
+    # https://github.com/pandas-dev/pandas/pull/63335
+    # Test error message when timezone data is not available.
+    msg = "'No time zone found with key Europe/Brussels'"
+    code = textwrap.dedent(
+        f"""\
+        import sys, zoneinfo, pandas as pd
+        sys.modules['tzdata'] = None
+        zoneinfo.reset_tzpath(['/path/to/nowhere'])
+        try:
+            pd.to_datetime('2012-01-01').tz_localize('Europe/Brussels')
+        except zoneinfo.ZoneInfoNotFoundError as err:
+            assert str(err) == "{msg}"
+        """
+    )
+    subprocess.check_call([sys.executable, "-c", code])
 
 
 def test_is_utc(utc_fixture):
@@ -52,12 +75,12 @@ def test_tzlocal_offset():
     # see gh-13583
     #
     # Get offset using normal datetime for test.
-    ts = Timestamp("2011-01-01", tz=dateutil.tz.tzlocal())
+    ts = Timestamp("2011-01-01", tz=dateutil.tz.tzlocal()).as_unit("s")
 
     offset = dateutil.tz.tzlocal().utcoffset(datetime(2011, 1, 1))
     offset = offset.total_seconds()
 
-    assert ts._value + offset == Timestamp("2011-01-01")._value
+    assert ts._value + offset == Timestamp("2011-01-01").as_unit("s")._value
 
 
 def test_tzlocal_is_not_utc():
@@ -169,3 +192,18 @@ def test_maybe_get_tz_offset_only():
 
     tz = timezones.maybe_get_tz("UTC-02:45")
     assert tz == timezone(-timedelta(hours=2, minutes=45))
+
+
+def test_normalize_pytz_timezone():
+    pytz = pytest.importorskip("pytz")
+
+    from pandas.io._util import _normalize_pytz_timezone
+
+    for tz, expected in [
+        (pytz.UTC, timezone.utc),
+        (pytz.FixedOffset(90), timezone(timedelta(minutes=90))),
+        (pytz.timezone("America/New_York"), zoneinfo.ZoneInfo("America/New_York")),
+        (pytz.timezone("Etc/GMT+1"), zoneinfo.ZoneInfo("Etc/GMT+1")),
+    ]:
+        result = _normalize_pytz_timezone(tz)
+        assert result == expected

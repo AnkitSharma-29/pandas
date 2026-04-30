@@ -16,6 +16,7 @@ from datetime import (
     tzinfo,
 )
 from os import PathLike
+from types import EllipsisType
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -83,7 +84,7 @@ if TYPE_CHECKING:
 
     # numpy compatible types
     NumpyValueArrayLike: TypeAlias = ScalarLike_co | npt.ArrayLike
-    NumpySorter: TypeAlias = npt._ArrayLikeInt_co | None
+    NumpySorter: TypeAlias = npt.NDArray[np.integer] | None
 
 
 P = ParamSpec("P")
@@ -107,6 +108,8 @@ _T_co = TypeVar("_T_co", covariant=True)
 
 
 class SequenceNotStr(Protocol[_T_co]):
+    __module__: str = "pandas.api.typing.aliases"
+
     @overload
     def __getitem__(self, index: SupportsIndex, /) -> _T_co: ...
 
@@ -278,12 +281,16 @@ class BaseBuffer(Protocol):
 
 
 class ReadBuffer(BaseBuffer, Protocol[AnyStr_co]):
+    __module__: str = "pandas.api.typing.aliases"
+
     def read(self, n: int = ..., /) -> AnyStr_co:
         # for BytesIOWrapper, gzip.GzipFile, bz2.BZ2File
         ...
 
 
 class WriteBuffer(BaseBuffer, Protocol[AnyStr_contra]):
+    __module__: str = "pandas.api.typing.aliases"
+
     def write(self, b: AnyStr_contra, /) -> Any:
         # for gzip.GzipFile, bz2.BZ2File
         ...
@@ -294,14 +301,20 @@ class WriteBuffer(BaseBuffer, Protocol[AnyStr_contra]):
 
 
 class ReadPickleBuffer(ReadBuffer[bytes], Protocol):
+    __module__: str = "pandas.api.typing.aliases"
+
     def readline(self) -> bytes: ...
 
 
 class WriteExcelBuffer(WriteBuffer[bytes], Protocol):
+    __module__: str = "pandas.api.typing.aliases"
+
     def truncate(self, size: int | None = ..., /) -> int: ...
 
 
 class ReadCsvBuffer(ReadBuffer[AnyStr_co], Protocol):
+    __module__: str = "pandas.api.typing.aliases"
+
     def __iter__(self) -> Iterator[AnyStr_co]:
         # for engine=python
         ...
@@ -377,12 +390,9 @@ Manager: TypeAlias = Union["BlockManager", "SingleBlockManager"]
 # SequenceIndexer is for list like or slices (but not tuples)
 # PositionalIndexerTuple is extends the PositionalIndexer for 2D arrays
 # These are used in various __getitem__ overloads
-# TODO(typing#684): add Ellipsis, see
-# https://github.com/python/typing/issues/684#issuecomment-548203158
-# https://bugs.python.org/issue41810
 # Using List[int] here rather than Sequence[int] to disallow tuples.
 ScalarIndexer: TypeAlias = int | np.integer
-SequenceIndexer: TypeAlias = slice | list[int] | np.ndarray
+SequenceIndexer: TypeAlias = slice | EllipsisType | list[int] | np.ndarray
 PositionalIndexer: TypeAlias = ScalarIndexer | SequenceIndexer
 PositionalIndexerTuple: TypeAlias = tuple[PositionalIndexer, PositionalIndexer]
 PositionalIndexer2D: TypeAlias = PositionalIndexer | PositionalIndexerTuple
@@ -467,7 +477,9 @@ MatplotlibColor: TypeAlias = str | Sequence[float]
 TimeGrouperOrigin: TypeAlias = Union[
     "Timestamp", Literal["epoch", "start", "start_day", "end", "end_day"]
 ]
-TimeAmbiguous: TypeAlias = Literal["infer", "NaT", "raise"] | npt.NDArray[np.bool_]
+TimeAmbiguous: TypeAlias = (
+    Literal["infer", "NaT", "raise"] | bool | npt.NDArray[np.bool_]
+)
 TimeNonexistent: TypeAlias = (
     Literal["shift_forward", "shift_backward", "NaT", "raise"] | timedelta
 )
@@ -520,5 +532,45 @@ UsecolsArgType: TypeAlias = (
 SequenceT = TypeVar("SequenceT", bound=Sequence[Hashable])
 
 SliceType: TypeAlias = Hashable | None
+
+
+# Arrow PyCapsule Interface
+# from https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html#protocol-typehints
+
+
+class ArrowArrayExportable(Protocol):
+    """
+    An object with an ``__arrow_c_array__`` method.
+
+    This method indicates the object is an Arrow-compatible object implementing
+    the `Arrow PyCapsule Protocol`_ (exposing the `Arrow C Data Interface`_ in
+    Python), enabling zero-copy Arrow data interchange across libraries.
+
+    .. _Arrow PyCapsule Protocol: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    .. _Arrow C Data Interface: https://arrow.apache.org/docs/format/CDataInterface.html
+
+    """
+
+    def __arrow_c_array__(
+        self, requested_schema: object | None = None
+    ) -> tuple[object, object]: ...
+
+
+class ArrowStreamExportable(Protocol):
+    """
+    An object with an ``__arrow_c_stream__`` method.
+
+    This method indicates the object is an Arrow-compatible object implementing
+    the `Arrow PyCapsule Protocol`_ (exposing the `Arrow C Data Interface`_
+    for streams in Python), enabling zero-copy Arrow data interchange across
+    libraries.
+
+    .. _Arrow PyCapsule Protocol: https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    .. _Arrow C Stream Interface: https://arrow.apache.org/docs/format/CStreamInterface.html
+
+    """
+
+    def __arrow_c_stream__(self, requested_schema: object | None = None) -> object: ...
+
 
 __all__ = ["type_t"]

@@ -10,7 +10,6 @@ from pandas import (
     MultiIndex,
     Series,
     _testing as tm,
-    option_context,
 )
 from pandas.core.strings.accessor import StringMethods
 
@@ -22,7 +21,9 @@ _any_allowed_skipna_inferred_dtype = [
     ("empty", []),
     ("mixed-integer", ["a", np.nan, 2]),
 ]
-ids, _ = zip(*_any_allowed_skipna_inferred_dtype)  # use inferred type as id
+ids, _ = zip(
+    *_any_allowed_skipna_inferred_dtype, strict=True
+)  # use inferred type as id
 
 
 @pytest.fixture(params=_any_allowed_skipna_inferred_dtype, ids=ids)
@@ -158,6 +159,20 @@ def test_api_per_method(
         mark = pytest.mark.xfail(raises=raises, reason=reason)
         request.applymarker(mark)
 
+    if (
+        box is Index
+        and method_name in ("findall", "split", "rsplit")
+        and not kwargs.get("expand", False)
+        and values.size > 0
+        and inferred_dtype not in ("bytes", "empty")
+    ):
+        mark = pytest.mark.xfail(
+            raises=TypeError,
+            reason="GH#20285 returns unhashable list elements in Index",
+            strict=False,
+        )
+        request.applymarker(mark)
+
     t = box(values, dtype=dtype)  # explicit dtype to avoid casting
     method = getattr(t.str, method_name)
 
@@ -181,8 +196,7 @@ def test_api_per_method(
 
     if inferred_dtype in allowed_types:
         # xref GH 23555, GH 23556
-        with option_context("future.no_silent_downcasting", True):
-            method(*args, **kwargs)  # works!
+        method(*args, **kwargs)  # works!
     else:
         # GH 23011, GH 23163
         msg = (

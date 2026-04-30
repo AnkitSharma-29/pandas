@@ -10,18 +10,17 @@ Other items:
 
 from __future__ import annotations
 
-import os
 import platform
 import sys
 from typing import TYPE_CHECKING
 
 from pandas.compat._constants import (
+    CHAINED_WARNING_DISABLED,
     IS64,
     ISMUSL,
     PY312,
     PY314,
     PYPY,
-    WARNING_CHECK_DISABLED,
     WASM,
 )
 from pandas.compat.numpy import is_numpy_dev
@@ -36,6 +35,8 @@ from pandas.compat.pyarrow import (
     pa_version_under19p0,
     pa_version_under20p0,
     pa_version_under21p0,
+    pa_version_under22p0,
+    pa_version_under23p0,
 )
 
 if TYPE_CHECKING:
@@ -138,20 +139,8 @@ def is_platform_riscv64() -> bool:
     return platform.machine() == "riscv64"
 
 
-def is_ci_environment() -> bool:
-    """
-    Checking if running in a continuous integration environment by checking
-    the PANDAS_CI environment variable.
-
-    Returns
-    -------
-    bool
-        True if the running in a continuous integration environment.
-    """
-    return os.environ.get("PANDAS_CI", "0") == "1"
-
-
 __all__ = [
+    "CHAINED_WARNING_DISABLED",
     "HAS_PYARROW",
     "IS64",
     "ISMUSL",
@@ -159,7 +148,6 @@ __all__ = [
     "PY314",
     "PYARROW_MIN_VERSION",
     "PYPY",
-    "WARNING_CHECK_DISABLED",
     "WASM",
     "is_numpy_dev",
     "pa_version_under14p0",
@@ -170,4 +158,6 @@ __all__ = [
     "pa_version_under19p0",
     "pa_version_under20p0",
     "pa_version_under21p0",
+    "pa_version_under22p0",
+    "pa_version_under23p0",
 ]

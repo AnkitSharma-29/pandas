@@ -219,6 +219,10 @@ Furthermore you can align a level of a MultiIndexed DataFrame with a Series.
    )
    dfmi.sub(column, axis=0, level="second")
 
+When operating with a plain Python list, pandas aligns it to the **columns**
+of the DataFrame (not the rows); to broadcast row-wise, pass ``axis=0`` to
+the explicit method, e.g. ``df.add([1, 2, 3], axis=0)``.
+
 Series and Index also support the :func:`divmod` builtin. This function takes
 the floor division and modulo operation at the same time returning a two-tuple
 of the same type as the left hand side. For example:
@@ -1628,7 +1632,7 @@ This enables nice expressions like this:
 
    s[s.dt.day == 2]
 
-You can easily produces tz aware transformations:
+You can easily produce tz aware transformations:
 
 .. ipython:: python
 
@@ -2372,11 +2376,18 @@ integers:
 
    df.select_dtypes(include=["number", "bool"], exclude=["unsignedinteger"])
 
-To select string columns you must use the ``object`` dtype:
+To select string columns include ``str``:
 
 .. ipython:: python
 
-   df.select_dtypes(include=["object"])
+   df.select_dtypes(include=[str])
+
+.. note::
+
+    This is a change in pandas 3.0. Previously strings were stored in ``object``
+    dtype columns, so would be selected with ``include=[object]``. See
+    :ref:`the migration guide <string_migration.select_dtypes>` for details on
+    how to write code that works with both versions.
 
 To see all the child dtypes of a generic ``dtype`` like ``numpy.number`` you
 can define a function that returns a tree of child dtypes:

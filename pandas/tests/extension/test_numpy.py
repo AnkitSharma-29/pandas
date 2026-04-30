@@ -77,8 +77,10 @@ def allow_in_pandas(monkeypatch):
 @pytest.fixture
 def data(allow_in_pandas, dtype):
     if dtype.numpy_dtype == "object":
-        return pd.Series([(i,) for i in range(10)]).array
-    return NumpyExtensionArray(np.arange(1, 11, dtype=dtype._dtype))
+        arr = pd.Series([(i,) for i in range(10)])._values
+    else:
+        arr = np.arange(1, 11, dtype=dtype._dtype)
+    return NumpyExtensionArray(arr)
 
 
 @pytest.fixture
@@ -291,6 +293,7 @@ class TestNumpyExtensionArray(base.ExtensionTests):
         self.series_array_exc = series_array_exc
         super().test_arith_series_with_array(data, all_arithmetic_operators)
 
+    @skip_nested
     def test_arith_frame_with_scalar(self, data, all_arithmetic_operators, request):
         opname = all_arithmetic_operators
         frame_scalar_exc = None
@@ -306,7 +309,7 @@ class TestNumpyExtensionArray(base.ExtensionTests):
 
     def _supports_reduction(self, ser: pd.Series, op_name: str) -> bool:
         if ser.dtype.kind == "O":
-            return op_name in ["sum", "min", "max", "any", "all"]
+            return op_name in ["sum", "min", "max", "any", "all", "count"]
         return True
 
     def check_reduce(self, ser: pd.Series, op_name: str, skipna: bool):
@@ -339,6 +342,11 @@ class TestNumpyExtensionArray(base.ExtensionTests):
     def test_fillna_frame(self, data_missing):
         # Non-scalar "scalar" values.
         super().test_fillna_frame(data_missing)
+
+    @skip_nested
+    def test_fillna_readonly(self, data_missing):
+        # Non-scalar "scalar" values.
+        super().test_fillna_readonly(data_missing)
 
     @skip_nested
     def test_setitem_invalid(self, data, invalid_scalar):

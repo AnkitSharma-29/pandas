@@ -60,7 +60,6 @@ from typing import (
 )
 import warnings
 
-from pandas._typing import F
 from pandas.util._exceptions import find_stack_level
 
 if TYPE_CHECKING:
@@ -69,6 +68,8 @@ if TYPE_CHECKING:
         Generator,
         Sequence,
     )
+
+    from pandas._typing import F
 
 
 class DeprecatedOption(NamedTuple):
@@ -116,6 +117,8 @@ class OptionError(AttributeError, KeyError):
     Traceback (most recent call last):
     OptionError: No such option
     """
+
+    __module__ = "pandas.errors"
 
 
 #
@@ -271,7 +274,7 @@ def set_option(*args) -> None:
     if not nargs or nargs % 2 != 0:
         raise ValueError("Must provide an even number of non-keyword arguments")
 
-    for k, v in zip(args[::2], args[1::2]):
+    for k, v in zip(args[::2], args[1::2], strict=True):
         key = _get_single_key(k)
 
         opt = _get_registered_option(key)
@@ -441,6 +444,8 @@ class DictWrapper:
 
 
 options = DictWrapper(_global_config)
+# DictWrapper defines a custom setattr
+object.__setattr__(options, "__module__", "pandas")
 
 #
 # Functions for use by pandas developers, in addition to User - api
@@ -502,7 +507,8 @@ def option_context(*args) -> Generator[None]:
             "option_context(pat, val, pat, val...)."
         )
 
-    ops = tuple(zip(args[::2], args[1::2]))
+    ops = tuple(zip(args[::2], args[1::2], strict=True))
+    undo: tuple[tuple[Any, Any], ...] = ()
     try:
         undo = tuple((pat, get_option(pat)) for pat, val in ops)
         for pat, val in ops:
@@ -806,7 +812,7 @@ def config_prefix(prefix: str) -> Generator[None]:
             pkey = f"{prefix}.{key}"
             return func(pkey, *args, **kwds)
 
-        return cast(F, inner)
+        return cast("F", inner)
 
     _register_option = register_option
     _get_option = get_option
@@ -939,3 +945,11 @@ def is_callable(obj: object) -> bool:
     if not callable(obj):
         raise ValueError("Value must be a callable")
     return True
+
+
+# import set_module here would cause circular import
+get_option.__module__ = "pandas"
+set_option.__module__ = "pandas"
+describe_option.__module__ = "pandas"
+reset_option.__module__ = "pandas"
+option_context.__module__ = "pandas"

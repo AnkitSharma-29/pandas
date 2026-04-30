@@ -67,6 +67,9 @@ def data_for_grouping():
 
 
 class TestDecimalArray(base.ExtensionTests):
+    def _honors_copy_keyword(self, data) -> bool:
+        return False
+
     def _get_expected_exception(
         self, op_name: str, obj, other
     ) -> type[Exception] | tuple[type[Exception], ...] | None:
@@ -98,10 +101,6 @@ class TestDecimalArray(base.ExtensionTests):
             request.applymarker(mark)
 
         return super().test_reduce_frame(data, all_numeric_reductions, skipna)
-
-    def test_compare_scalar(self, data, comparison_op):
-        ser = pd.Series(data)
-        self._compare_other(ser, data, comparison_op, 0.5)
 
     def test_compare_array(self, data, comparison_op):
         ser = pd.Series(data)
